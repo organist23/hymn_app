@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 // We can't use react-native-pdf as requested "No other libraries".
 // expo-print can PREVIEW a PDF? No, it prints HTML. 
 // BUT on iOS WebView can show PDF. On Android it cannot natively.
@@ -29,6 +29,7 @@ const PDFViewerScreen = ({ route, navigation }) => {
   const { uri } = route.params;
   const [base64, setBase64] = useState(null);
   const [loading, setLoading] = useState(Platform.OS === 'android');
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -56,10 +57,14 @@ const PDFViewerScreen = ({ route, navigation }) => {
   };
 
   const handlePrint = async () => {
+    setIsPrinting(true);
     try {
         await Print.printAsync({ uri });
     } catch (e) {
         console.error(e);
+        Alert.alert("Print Error", "Could not trigger printing. Check your connection.");
+    } finally {
+        setIsPrinting(false);
     }
   };
 
@@ -147,24 +152,32 @@ const PDFViewerScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.floatingBack} 
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.backIcon}>←</Text>
-      </TouchableOpacity>
+      {!isPrinting && (
+        <TouchableOpacity 
+          style={styles.floatingBack} 
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+      )}
       
       <View style={styles.webviewContainer}>
         {renderContent()}
       </View>
 
       <View style={styles.footer}>
-         <TouchableOpacity style={styles.button} onPress={handleShare}>
-             <Text style={styles.buttonText}>Open / Share</Text>
+         <TouchableOpacity 
+           style={[styles.button, styles.printBtn, isPrinting && styles.disabledButton]} 
+           onPress={handlePrint}
+           disabled={isPrinting}
+         >
+             {isPrinting ? (
+               <ActivityIndicator color="#fff" size="small" />
+             ) : (
+               <Text style={styles.buttonText}>🖨️ Print</Text>
+             )}
          </TouchableOpacity>
-         <TouchableOpacity style={[styles.button, styles.printButton]} onPress={handlePrint}>
-             <Text style={styles.buttonText}>Print</Text>
-         </TouchableOpacity>
+         <Text style={styles.wifiHint}>* Ensure WiFi is connected to printer</Text>
       </View>
     </View>
   );
@@ -173,7 +186,7 @@ const PDFViewerScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: '#fff',
   },
   webviewContainer: {
     flex: 1,
@@ -193,29 +206,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   footer: {
-    height: 100,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    padding: 20,
+    paddingBottom: 40,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f5',
     alignItems: 'center',
-    backgroundColor: '#222',
-    gap: 20,
-    paddingBottom: 20,
+    gap: 12,
   },
   button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    minWidth: 140,
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
   },
-  printButton: {
-    backgroundColor: '#666',
+  shareBtn: {
+    backgroundColor: '#fff',
+    borderColor: '#4D9FFF',
+  },
+  printBtn: {
+    backgroundColor: '#4D9FFF',
+    borderColor: '#4D9FFF',
+  },
+  wifiHint: {
+    fontSize: 11,
+    color: '#8e8e93',
+    fontWeight: '600',
+    marginTop: 4,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '700',
+    fontSize: 15,
   },
   floatingBack: {
     position: 'absolute',
@@ -233,7 +257,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
-  }
+  },
+  disabledFooter: {
+    opacity: 0.8,
+  },
+  disabledButton: {
+    backgroundColor: '#C7C7CC',
+    borderColor: '#C7C7CC',
+  },
 });
 
 export default PDFViewerScreen;
