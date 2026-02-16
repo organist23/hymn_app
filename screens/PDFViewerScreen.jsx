@@ -69,36 +69,24 @@ const PDFViewerScreen = ({ route, navigation }) => {
   };
 
   const handlePrint = async () => {
-    Alert.alert(
-      "Printer Detected",
-      "Ready to print. Tap 'Continue' to start the wireless transmission.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Continue", 
-          onPress: async () => {
-            try {
-                setIsPreparingPrint(true);
-                setPrintProgress(0);
-                
-                setPrintStatus('Processing...');
-                for (let i = 0; i <= 100; i += 2) {
-                    setPrintProgress(i);
-                    await new Promise(resolve => setTimeout(resolve, 30));
-                }
-
-                await Print.printAsync({ uri });
-            } catch (e) {
-                console.error(e);
-                Alert.alert("Printer Error", "Could not connect to printer. Please check your WiFi.");
-            } finally {
-                setIsPreparingPrint(false);
-                setPrintProgress(0);
-            }
-          }
+    try {
+        setIsPreparingPrint(true);
+        setPrintProgress(0);
+        
+        setPrintStatus('Processing...');
+        for (let i = 0; i <= 100; i += 2) {
+            setPrintProgress(i);
+            await new Promise(resolve => setTimeout(resolve, 30));
         }
-      ]
-    );
+
+        await Print.printAsync({ uri });
+    } catch (e) {
+        console.error(e);
+        Alert.alert("Printer Error", "Could not connect to printer. Please check your WiFi.");
+    } finally {
+        setIsPreparingPrint(false);
+        setPrintProgress(0);
+    }
   };
 
   const renderContent = () => {

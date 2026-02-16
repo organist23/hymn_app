@@ -158,10 +158,6 @@ const HomeScreen = ({ navigation }) => {
         'Success', 
         `Created ${outputName}`,
         [
-            { 
-              text: 'Print Now', 
-              onPress: () => navigation.navigate('PDFViewer', { uri: combinedUri, autoPrint: true })
-            },
             { text: 'View Now', onPress: () => navigation.navigate('PDFViewer', { uri: combinedUri }) },
             { text: 'OK' }
         ]
