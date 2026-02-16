@@ -4,7 +4,7 @@
     "slug": "hymn-combiner",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./logo/logo.jpg",
+    "icon": "./logo/music.jpg",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./logo/logo.jpg",
+        "foregroundImage": "./logo/music.jpg",
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.hymncombiner"
@@ -31,6 +31,12 @@
       "eas": {
         "projectId": "edbea0b4-1806-4695-9a1d-30c82371deaf"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/edbea0b4-1806-4695-9a1d-30c82371deaf"
     }
   }
 }
