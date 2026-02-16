@@ -29,13 +29,25 @@ const PDFViewerScreen = ({ route, navigation }) => {
   const { uri } = route.params;
   const [base64, setBase64] = useState(null);
   const [loading, setLoading] = useState(Platform.OS === 'android');
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const [printProgress, setPrintProgress] = useState(0);
+  const [printStatus, setPrintStatus] = useState('Preparing Document...');
 
   useEffect(() => {
     if (Platform.OS === 'android') {
       loadBase64();
     }
   }, [uri]);
+
+  useEffect(() => {
+    // Check if we should trigger auto-print
+    if (route.params?.autoPrint && !loading && (Platform.OS === 'ios' || base64)) {
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        handlePrint();
+      }, 500);
+    }
+  }, [loading, base64]);
 
   const loadBase64 = async () => {
     try {
@@ -57,15 +69,36 @@ const PDFViewerScreen = ({ route, navigation }) => {
   };
 
   const handlePrint = async () => {
-    setIsPrinting(true);
-    try {
-        await Print.printAsync({ uri });
-    } catch (e) {
-        console.error(e);
-        Alert.alert("Print Error", "Could not trigger printing. Check your connection.");
-    } finally {
-        setIsPrinting(false);
-    }
+    Alert.alert(
+      "Printer Detected",
+      "Ready to print. Tap 'Continue' to start the wireless transmission.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Continue", 
+          onPress: async () => {
+            try {
+                setIsPreparingPrint(true);
+                setPrintProgress(0);
+                
+                setPrintStatus('Processing...');
+                for (let i = 0; i <= 100; i += 2) {
+                    setPrintProgress(i);
+                    await new Promise(resolve => setTimeout(resolve, 30));
+                }
+
+                await Print.printAsync({ uri });
+            } catch (e) {
+                console.error(e);
+                Alert.alert("Printer Error", "Could not connect to printer. Please check your WiFi.");
+            } finally {
+                setIsPreparingPrint(false);
+                setPrintProgress(0);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderContent = () => {
@@ -152,32 +185,41 @@ const PDFViewerScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      {!isPrinting && (
-        <TouchableOpacity 
-          style={styles.floatingBack} 
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity 
+        style={styles.floatingBack} 
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.backIcon}>←</Text>
+      </TouchableOpacity>
       
+      {isPreparingPrint && (
+        <View style={styles.fullProgressOverlay}>
+          <View style={styles.progressCard}>
+            <Text style={styles.progressHeading}>{printStatus}</Text>
+            <Text style={styles.progressValue}>{printProgress}%</Text>
+            <View style={styles.fullProgressBarWrapper}>
+              <View style={[styles.fullProgressBarFill, { width: `${printProgress}%` }]} />
+            </View>
+          </View>
+        </View>
+      )}
+
       <View style={styles.webviewContainer}>
         {renderContent()}
       </View>
 
       <View style={styles.footer}>
          <TouchableOpacity 
-           style={[styles.button, styles.printBtn, isPrinting && styles.disabledButton]} 
+           style={[styles.button, styles.printBtn, isPreparingPrint && styles.disabledBtn]} 
            onPress={handlePrint}
-           disabled={isPrinting}
+           disabled={isPreparingPrint}
          >
-             {isPrinting ? (
-               <ActivityIndicator color="#fff" size="small" />
-             ) : (
-               <Text style={styles.buttonText}>🖨️ Print</Text>
-             )}
+             <Text style={styles.buttonText}>🖨️ Print Document</Text>
          </TouchableOpacity>
-         <Text style={styles.wifiHint}>* Ensure WiFi is connected to printer</Text>
+         
+         <View style={styles.hintContainer}>
+            <Text style={styles.wifiHint}>📡 Connect to same WiFi as printer</Text>
+         </View>
       </View>
     </View>
   );
@@ -229,42 +271,108 @@ const styles = StyleSheet.create({
   printBtn: {
     backgroundColor: '#4D9FFF',
     borderColor: '#4D9FFF',
+    shadowColor: '#4D9FFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  fullProgressOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  progressCard: {
+    backgroundColor: '#fff',
+    width: '100%',
+    padding: 30,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  progressHeading: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  progressValue: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: '#4D9FFF',
+    marginVertical: 5,
+  },
+  fullProgressBarWrapper: {
+    width: '100%',
+    height: 14,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 7,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  fullProgressBarFill: {
+    height: '100%',
+    backgroundColor: '#4D9FFF',
+  },
+  checklistContainer: {
+    width: '100%',
+    backgroundColor: '#F9F9F9',
+    padding: 15,
+    borderRadius: 12,
+  },
+  checkItem: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  hintContainer: {
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    marginTop: 6,
   },
   wifiHint: {
-    fontSize: 11,
+    fontSize: 9,
     color: '#8e8e93',
-    fontWeight: '600',
-    marginTop: 4,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
+    fontWeight: '800',
+    fontSize: 16,
+    letterSpacing: 0.5,
   },
   floatingBack: {
     position: 'absolute',
-    top: 50,
-    left: 20,
+    top: 30,
+    left: 15,
     zIndex: 10,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backIcon: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-  },
-  disabledFooter: {
-    opacity: 0.8,
-  },
-  disabledButton: {
-    backgroundColor: '#C7C7CC',
-    borderColor: '#C7C7CC',
-  },
+  }
 });
 
 export default PDFViewerScreen;

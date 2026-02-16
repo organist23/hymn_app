@@ -160,14 +160,7 @@ const HomeScreen = ({ navigation }) => {
         [
             { 
               text: 'Print Now', 
-              onPress: async () => {
-                try {
-                  await Print.printAsync({ uri: combinedUri });
-                } catch (e) {
-                  console.error(e);
-                  Alert.alert('Error', 'Failed to print. Ensure you are connected to the same WiFi as your printer.');
-                }
-              }
+              onPress: () => navigation.navigate('PDFViewer', { uri: combinedUri, autoPrint: true })
             },
             { text: 'View Now', onPress: () => navigation.navigate('PDFViewer', { uri: combinedUri }) },
             { text: 'OK' }
