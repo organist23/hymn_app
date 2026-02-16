@@ -69,7 +69,7 @@ export default function HistoryScreen({ navigation }) {
     );
   };
 
-  const renderHymnChips = (hymns, isPinned) => {
+  const renderHymnChips = (hymns, isPinned, label) => {
     if (!hymns) return null;
     const list = Array.isArray(hymns) ? hymns : String(hymns).split(',').map(s => s.trim());
     const filtered = list.map(h => parseInt(h, 10)).filter(num => !isNaN(num));
@@ -77,12 +77,15 @@ export default function HistoryScreen({ navigation }) {
     if (filtered.length === 0) return null;
 
     return (
-      <View style={styles.chipContainer}>
-        {filtered.map((num, idx) => (
-          <View key={idx} style={[styles.hymnChip, isPinned && styles.pinnedHymnChip]}>
-            <Text style={[styles.hymnChipText, isPinned && styles.pinnedHymnChipText]}>{num}</Text>
-          </View>
-        ))}
+      <View style={styles.categoryContainer}>
+        <Text style={[styles.categoryLabel, isPinned && styles.pinnedCategoryLabel]}>{label}:</Text>
+        <View style={styles.chipContainer}>
+          {filtered.map((num, idx) => (
+            <View key={idx} style={[styles.hymnChip, isPinned && styles.pinnedHymnChip]}>
+              <Text style={[styles.hymnChipText, isPinned && styles.pinnedHymnChipText]}>{num}</Text>
+            </View>
+          ))}
+        </View>
       </View>
     );
   };
@@ -95,13 +98,21 @@ export default function HistoryScreen({ navigation }) {
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
           <Text style={styles.date} numberOfLines={1}>{item.fileName}</Text>
+          {item.isPinned && (
+            <View style={styles.pinnedBadge}>
+              <Text style={styles.pinnedBadgeText}>📍 PINNED</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.timestamp}>{new Date(item.createdAt).toLocaleDateString()}</Text>
       </View>
 
       <View style={styles.details}>
         <Text style={styles.detailLabel}>Hymns Included</Text>
-        {renderHymnChips(item.mainHymns, item.isPinned)}
+        {renderHymnChips(item.mainHymns, item.isPinned, 'Main Hymns')}
+        {renderHymnChips(item.preludes, item.isPinned, 'Preludes')}
+        {renderHymnChips(item.offering, item.isPinned, 'Offering')}
+        {renderHymnChips(item.recessional, item.isPinned, 'Recessional')}
       </View>
 
       <View style={styles.actions}>
@@ -214,9 +225,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   pinnedCard: {
-    backgroundColor: '#f6faff', // Subtle blue tint for pinned items
-    borderColor: 'rgba(0, 122, 255, 0.2)',
-    borderWidth: 1.5,
+    backgroundColor: '#ebf5ff', // Richer blue tint
+    borderColor: 'rgba(77, 159, 255, 0.4)', // Stronger border
+    borderWidth: 2,
+    elevation: 12, // More depth
   },
   accentBar: {
     position: 'absolute',
@@ -224,11 +236,24 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 6,
-    backgroundColor: '#4D9FFF', // Softer blue
+    backgroundColor: '#4D9FFF',
     shadowColor: '#4D9FFF',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 3, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+  pinnedBadge: {
+    backgroundColor: '#4D9FFF',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  pinnedBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -262,12 +287,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start', // Top-align labels for multi-line chips
+    marginBottom: 12,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#8e8e93',
+    marginRight: 8,
+    minWidth: 85,
+    marginTop: 6, // Align with the first row of chips
+  },
+  pinnedCategoryLabel: {
+    color: '#007AFF', // Stronger blue for pinned category text
   },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    flex: 1,
   },
   hymnChip: {
     backgroundColor: '#f2f2f7',

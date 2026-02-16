@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
+    BackHandler,
     Image,
     ScrollView,
     StyleSheet,
@@ -143,8 +144,8 @@ const HomeScreen = ({ navigation }) => {
         serviceDate: selected.label,
         preludes: parsedPreludes,
         mainHymns: parsedMain,
-        offering: parsedOffering.join(', '),
-        recessional: parsedRecessional.join(', '),
+        offering: parsedOffering,
+        recessional: parsedRecessional,
         filePath: combinedUri,
         fileName: outputName,
         createdAt: new Date().toISOString(),
@@ -167,6 +168,17 @@ const HomeScreen = ({ navigation }) => {
       setLoading(false);
       Alert.alert('Error', 'Failed to combine PDFs. ' + error.message);
     }
+  };
+
+  const handleExit = () => {
+    Alert.alert(
+      "Exit App",
+      "Are you sure you want to close the app?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Exit", onPress: () => BackHandler.exitApp() }
+      ]
+    );
   };
 
   return (
@@ -247,9 +259,21 @@ const HomeScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-      <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('History')}>
-        <Text style={styles.historyButtonText}>View History</Text>
-      </TouchableOpacity>
+      <View style={styles.navSection}>
+        <TouchableOpacity 
+          style={[styles.navButton, styles.historyNavBtn]} 
+          onPress={() => navigation.navigate('History')}
+        >
+          <Text style={styles.historyNavBtnText}>📂 View History</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.navButton, styles.exitNavBtn]} 
+          onPress={handleExit}
+        >
+          <Text style={styles.exitNavBtnText}>🚪 Exit App</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.footer}>
         <Text style={styles.copyrightText}>Copyright © 2026 Keiphil Guimba</Text>
@@ -373,9 +397,48 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
   },
-  historyButtonText: {
-    color: '#4D9FFF', // Theme accent blue
-    fontSize: 16,
+  navSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  navButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    maxWidth: 160,
+  },
+  historyNavBtn: {
+    backgroundColor: '#fff',
+    borderColor: '#4D9FFF',
+    shadowColor: '#4D9FFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  historyNavBtnText: {
+    color: '#4D9FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  exitNavBtn: {
+    backgroundColor: '#fff',
+    borderColor: '#ff3b30',
+    shadowColor: '#ff3b30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  exitNavBtnText: {
+    color: '#ff3b30',
+    fontSize: 14,
     fontWeight: '700',
   },
   footer: {
