@@ -111,52 +111,78 @@ const PDFViewerScreen = ({ route, navigation }) => {
       );
     }
 
-    // Android: Use PDF.js via CDN
+    // Android: Use PDF.js via CDN with improved data handling
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
           <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
           <style>
-              body { margin: 0; background-color: #333; display: flex; flex-direction: column; align-items: center; }
+              body { margin: 0; background-color: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
               #canvas-container { width: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
-              canvas { width: 95% !important; height: auto !important; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); background-color: white; }
-              .loading { color: white; padding: 20px; font-family: sans-serif; }
+              canvas { width: 98% !important; height: auto !important; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); background-color: white; border-radius: 4px; }
+              .status-message { color: #fff; padding: 40px 20px; font-family: -apple-system, sans-serif; text-align: center; font-size: 14px; line-height: 1.6; }
+              .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #4D9FFF; border-radius: 50%; width: 24px; height: 24px; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
           </style>
       </head>
       <body>
-          <div id="canvas-container"><div class="loading">Loading document...</div></div>
+          <div id="canvas-container">
+            <div id="status" class="status-message">
+              <div class="spinner"></div>
+              Initializing viewer...
+            </div>
+          </div>
           <script>
-              const pdfData = atob('${base64 || ''}');
-              const pdfjsLib = window['pdfjs-dist/build/pdf'];
-              pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+              const status = document.getElementById('status');
+              function setStatus(msg) {
+                status.innerHTML = msg;
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'status', message: msg }));
+              }
 
-              const loadingTask = pdfjsLib.getDocument({data: pdfData});
-              loadingTask.promise.then(function(pdf) {
-                  const container = document.getElementById('canvas-container');
-                  container.innerHTML = '';
-                  
-                  async function renderPage(num) {
-                      const page = await pdf.getPage(num);
-                      const viewport = page.getViewport({scale: 1.5});
-                      const canvas = document.createElement('canvas');
-                      const context = canvas.getContext('2d');
-                      canvas.height = viewport.height;
-                      canvas.width = viewport.width;
-                      container.appendChild(canvas);
-                      
-                      await page.render({canvasContext: context, viewport: viewport}).promise;
-                  }
+              try {
+                const pdfData = atob('${base64 || ''}');
+                const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-                  (async () => {
-                      for (let i = 1; i <= pdf.numPages; i++) {
-                          await renderPage(i);
-                      }
-                  })();
-              }).catch(err => {
-                  document.getElementById('canvas-container').innerHTML = '<div class="loading">Error: ' + err.message + '</div>';
-              });
+                setStatus('<div class="spinner"></div>Loading pages...');
+
+                const loadingTask = pdfjsLib.getDocument({data: pdfData});
+                loadingTask.promise.then(function(pdf) {
+                    const container = document.getElementById('canvas-container');
+                    container.innerHTML = '';
+                    
+                    async function renderPage(num) {
+                        try {
+                            const page = await pdf.getPage(num);
+                            const viewport = page.getViewport({scale: 2.0}); // Higher scale for clarity
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            container.appendChild(canvas);
+                            
+                            await page.render({canvasContext: context, viewport: viewport}).promise;
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'progress', page: num, total: pdf.numPages }));
+                        } catch (e) {
+                            console.error('Page render error:', e);
+                        }
+                    }
+
+                    (async () => {
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            await renderPage(i);
+                        }
+                    })();
+                }).catch(err => {
+                    setStatus('<div style="color:#ff3b30">Error loading PDF: ' + err.message + '</div>');
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', error: err.message }));
+                });
+              } catch (e) {
+                setStatus('<div style="color:#ff3b30">Initialization Error: ' + e.message + '</div>');
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', error: e.message }));
+              }
           </script>
       </body>
       </html>
@@ -167,6 +193,16 @@ const PDFViewerScreen = ({ route, navigation }) => {
         source={{ html }} 
         style={styles.webview}
         originWhitelist={['*']}
+        onMessage={(event) => {
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === 'error') {
+              Alert.alert("Preview Error", "Could not render the PDF preview. You can still print or share the document.");
+            }
+          } catch (e) {}
+        }}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
       />
     );
   };
