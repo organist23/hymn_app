@@ -27,6 +27,7 @@ import { WebView } from 'react-native-webview';
 
 const PDFViewerScreen = ({ route, navigation }) => {
   const { uri } = route.params;
+  const cleanUri = uri.split('?')[0];
   const [base64, setBase64] = useState(null);
   const [loading, setLoading] = useState(Platform.OS === 'android');
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
@@ -51,7 +52,7 @@ const PDFViewerScreen = ({ route, navigation }) => {
 
   const loadBase64 = async () => {
     try {
-      const data = await FileSystem.readAsStringAsync(uri, {
+      const data = await FileSystem.readAsStringAsync(cleanUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       setBase64(data);
@@ -64,7 +65,7 @@ const PDFViewerScreen = ({ route, navigation }) => {
 
   const handleShare = async () => {
     if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri);
+        await Sharing.shareAsync(cleanUri);
     }
   };
 
@@ -79,7 +80,7 @@ const PDFViewerScreen = ({ route, navigation }) => {
             await new Promise(resolve => setTimeout(resolve, 30));
         }
 
-        await Print.printAsync({ uri });
+        await Print.printAsync({ uri: cleanUri });
     } catch (e) {
         console.error(e);
         Alert.alert("Printer Error", "Could not connect to printer. Please check your WiFi.");

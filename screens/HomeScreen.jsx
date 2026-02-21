@@ -118,19 +118,34 @@ const HomeScreen = ({ navigation }) => {
       }
 
       // 3. Generate Output Filename
-      let outputName;
+      let baseOutputName;
       if (customFileName.trim()) {
         const sanitized = customFileName.replace(/[^a-z0-9 _-]/gi, '').trim();
         if (sanitized) {
-          outputName = sanitized.toLowerCase().endsWith('.pdf') ? sanitized : `${sanitized}.pdf`;
+          baseOutputName = sanitized.toLowerCase().endsWith('.pdf') ? sanitized.slice(0, -4) : sanitized;
         }
       }
 
-      if (!outputName) {
+      if (!baseOutputName) {
         const mm = String(month + 1).padStart(2, '0');
         const dd = String(selected.date).padStart(2, '0');
         const dayType = selected.fileLabel.split('-')[1]; // 'S' or 'TH'
-        outputName = `${year}-${mm}-${dd}-${dayType}.pdf`;
+        baseOutputName = `${year}-${mm}-${dd}-${dayType}`;
+      }
+
+      let outputName = `${baseOutputName}.pdf`;
+      const combinedDir = FileSystem.documentDirectory + 'combined/';
+      
+      // Ensure directory exists so we can check it
+      const dirInfo = await FileSystem.getInfoAsync(combinedDir);
+      if (dirInfo.exists) {
+        let counter = 2;
+        let checkFile = await FileSystem.getInfoAsync(combinedDir + outputName);
+        while (checkFile.exists) {
+          outputName = `${baseOutputName} (${counter}).pdf`;
+          checkFile = await FileSystem.getInfoAsync(combinedDir + outputName);
+          counter++;
+        }
       }
 
       // 4. Combine
@@ -158,7 +173,7 @@ const HomeScreen = ({ navigation }) => {
         'Success', 
         `Created ${outputName}`,
         [
-            { text: 'View Now', onPress: () => navigation.navigate('PDFViewer', { uri: combinedUri }) },
+            { text: 'View Now', onPress: () => navigation.navigate('PDFViewer', { uri: `${combinedUri}?t=${Date.now()}` }) },
             { text: 'OK' }
         ]
       );

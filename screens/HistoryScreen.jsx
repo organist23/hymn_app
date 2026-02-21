@@ -31,7 +31,7 @@ export default function HistoryScreen({ navigation }) {
   };
 
   const handleOpen = (uri) => {
-    navigation.navigate('PDFViewer', { uri });
+    navigation.navigate('PDFViewer', { uri: `${uri}?t=${Date.now()}` });
   };
 
   const handleShare = async (uri) => {
