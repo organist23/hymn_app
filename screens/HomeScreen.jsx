@@ -17,7 +17,7 @@ import { parseHymnInput } from '../utils/hymnUtils';
 import { createCombinedPdf } from '../utils/pdfUtils';
 import { saveToHistory } from '../utils/storageUtils';
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation, session, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [initDate] = useState(getCurrentDate());
   const [month, setMonth] = useState(initDate.month);
@@ -185,13 +185,13 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const handleExit = () => {
+  const handleLogout = () => {
     Alert.alert(
-      "Exit App",
-      "Are you sure you want to close the app?",
+      "Logout",
+      "Are you sure you want to sign out?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Exit", onPress: () => BackHandler.exitApp() }
+        { text: "Logout", style: "destructive", onPress: () => onLogout() }
       ]
     );
   };
@@ -279,20 +279,27 @@ const HomeScreen = ({ navigation }) => {
           style={[styles.navButton, styles.historyNavBtn]} 
           onPress={() => navigation.navigate('History')}
         >
-          <Text style={styles.historyNavBtnText}>📂 View History</Text>
+          <Text style={styles.historyNavBtnText}>📂 History</Text>
         </TouchableOpacity>
+
+        {session?.role === 'admin' && (
+          <TouchableOpacity 
+            style={[styles.navButton, styles.adminNavBtn]} 
+            onPress={() => navigation.navigate('Admin')}
+          >
+            <Text style={styles.adminNavBtnText}>⚙️ Admin</Text>
+          </TouchableOpacity>
+        )}
         
         <TouchableOpacity 
-          style={[styles.navButton, styles.exitNavBtn]} 
-          onPress={handleExit}
+          style={[styles.navButton, styles.logoutNavBtn]} 
+          onPress={handleLogout}
         >
-          <Text style={styles.exitNavBtnText}>🚪 Exit App</Text>
+          <Text style={styles.logoutNavBtnText}>🔓 Logout</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.copyrightText}>Copyright © 2026 Keiphil Guimba</Text>
-      </View>
+
 
     </ScrollView>
   );
@@ -301,23 +308,25 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9ff',
+    backgroundColor: '#0d0d0f',
     padding: 15,
   },
   mainHeader: {
     marginTop: 50,
     marginBottom: 24,
     padding: 24,
-    backgroundColor: '#4D9FFF', // Unified accent blue
+    backgroundColor: '#1a1a2e',
     borderRadius: 28,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: '#4D9FFF',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 15,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(77, 159, 255, 0.2)',
   },
   headerTextContainer: {
     flex: 1,
@@ -325,19 +334,19 @@ const styles = StyleSheet.create({
   logo: {
     width: 80,
     height: 80,
-    borderRadius: 40, // Perfect circle
+    borderRadius: 40,
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: 'rgba(77, 159, 255, 0.4)',
   },
   mainTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#fff', // White for blue background
+    color: '#e5e5e7',
     letterSpacing: -0.8,
   },
   mainSub: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.9)', // Semi-transparent white
+    color: 'rgba(255,255,255,0.6)',
     fontWeight: '600',
     marginTop: 2,
     textTransform: 'uppercase',
@@ -346,11 +355,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1c1c1e',
+    color: '#e5e5e7',
     marginBottom: 12,
     paddingLeft: 5,
     borderLeftWidth: 4,
-    borderLeftColor: '#4D9FFF', // Theme accent blue
+    borderLeftColor: '#4D9FFF',
   },
   datesContainer: {
     marginBottom: 20,
@@ -359,40 +368,40 @@ const styles = StyleSheet.create({
   dateCard: {
     paddingVertical: 10,
     paddingHorizontal: 15,
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#2c2c2e',
     height: 40,
     justifyContent: 'center',
   },
   selectedDateCard: {
-    backgroundColor: '#4D9FFF', // Unified accent blue
+    backgroundColor: '#4D9FFF',
     borderColor: '#4D9FFF',
   },
   dateText: {
-    color: '#333',
+    color: '#a1a1a6',
     fontWeight: '600',
   },
   selectedDateText: {
     color: '#fff',
   },
   inputSection: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     borderRadius: 24,
     padding: 20,
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    borderColor: '#2c2c2e',
   },
   combineButton: {
-    backgroundColor: '#4D9FFF', // Unified accent blue
+    backgroundColor: '#4D9FFF',
     paddingVertical: 18,
     borderRadius: 18,
     alignItems: 'center',
@@ -429,11 +438,11 @@ const styles = StyleSheet.create({
     maxWidth: 160,
   },
   historyNavBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     borderColor: '#4D9FFF',
     shadowColor: '#4D9FFF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 3,
   },
@@ -443,32 +452,46 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   exitNavBtn: {
-    backgroundColor: '#fff',
-    borderColor: '#ff3b30',
-    shadowColor: '#ff3b30',
+    backgroundColor: '#1c1c1e',
+    borderColor: '#ff453a',
+    shadowColor: '#ff453a',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 2,
   },
   exitNavBtnText: {
-    color: '#ff3b30',
+    color: '#ff453a',
     fontSize: 14,
     fontWeight: '700',
   },
-  footer: {
-    marginTop: 30,
-    marginBottom: 30,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f5',
-    paddingTop: 15,
+  adminNavBtn: {
+    backgroundColor: '#1c1c1e',
+    borderColor: '#5856D6',
+    shadowColor: '#5856D6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  copyrightText: {
-    fontSize: 11,
-    color: '#a1a1a6',
-    fontWeight: '500',
-    letterSpacing: 0.3,
+  adminNavBtnText: {
+    color: '#5856D6',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  logoutNavBtn: {
+    backgroundColor: '#1c1c1e',
+    borderColor: '#ff9500',
+    shadowColor: '#ff9500',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  logoutNavBtnText: {
+    color: '#ff9500',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

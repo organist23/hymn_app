@@ -3,31 +3,19 @@ import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { deleteFromHistory, getHistory, togglePin } from '../utils/storageUtils';
 
-export default function HistoryScreen({ navigation }) {
-  const [history, setHistory] = useState([]);
-  const [pinnedCount, setPinnedCount] = useState(0);
+export default function PinnedScreen({ navigation }) {
+  const [pinned, setPinned] = useState([]);
 
   useEffect(() => {
-    loadHistory();
+    loadPinned();
   }, []);
 
-  const loadHistory = async () => {
+  const loadPinned = async () => {
     const data = await getHistory();
-    const unpinned = data
-      .filter(item => !item.isPinned)
+    const pinnedData = data
+      .filter(item => item.isPinned)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const pinCount = data.filter(item => item.isPinned).length;
-    setPinnedCount(pinCount);
-    setHistory(unpinned);
-  };
-
-  const formatHymnList = (hymns) => {
-    if (!hymns) return '';
-    const list = Array.isArray(hymns) ? hymns : String(hymns).split(',').map(s => s.trim());
-    return list
-      .map(h => parseInt(h, 10))
-      .filter(num => !isNaN(num))
-      .join(', ');
+    setPinned(pinnedData);
   };
 
   const handleOpen = (uri) => {
@@ -42,17 +30,17 @@ export default function HistoryScreen({ navigation }) {
     }
   };
 
-  const handleTogglePin = async (id) => {
+  const handleUnpin = async (id) => {
     const updated = await togglePin(id);
     if (updated) {
-      loadHistory();
+      loadPinned();
     }
   };
 
   const handleDelete = (id) => {
     Alert.alert(
-      'Delete History',
-      'Are you sure you want to delete this record and its PDF?',
+      'Delete Pinned',
+      'Are you sure you want to delete this pinned record and its PDF?',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -61,7 +49,7 @@ export default function HistoryScreen({ navigation }) {
           onPress: async () => {
             const updated = await deleteFromHistory(id);
             if (updated) {
-              loadHistory();
+              loadPinned();
             }
           }
         }
@@ -92,9 +80,14 @@ export default function HistoryScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
+      <View style={styles.accentBar} />
+      
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
           <Text style={styles.date} numberOfLines={1} ellipsizeMode="tail">{item.fileName}</Text>
+          <View style={styles.pinnedBadge}>
+            <Text style={styles.pinnedBadgeText}>📍 PINNED</Text>
+          </View>
         </View>
         <Text style={styles.timestamp}>{new Date(item.createdAt).toLocaleDateString()}</Text>
       </View>
@@ -109,10 +102,10 @@ export default function HistoryScreen({ navigation }) {
 
       <View style={styles.actions}>
         <TouchableOpacity 
-          style={[styles.miniButton, styles.pinBtn]} 
-          onPress={() => handleTogglePin(item.id)}
+          style={[styles.miniButton, styles.unpinBtn]} 
+          onPress={() => handleUnpin(item.id)}
         >
-          <Text style={styles.miniButtonText}>📌 Pin</Text>
+          <Text style={[styles.miniButtonText, styles.unpinBtnText]}>📍 Unpin</Text>
         </TouchableOpacity>
 
         <View style={styles.mainActions}>
@@ -134,38 +127,23 @@ export default function HistoryScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate('History')} style={styles.backBtn}>
             <Text style={styles.backBtnIcon}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>History</Text>
+          <Text style={styles.title}>Pinned</Text>
         </View>
-        <Text style={styles.count}>{history.length} items</Text>
+        <Text style={styles.count}>{pinned.length} items</Text>
       </View>
-
-      {/* Navigate to Pinned */}
-      <TouchableOpacity 
-        style={styles.pinnedNavButton} 
-        onPress={() => navigation.navigate('Pinned')}
-      >
-        <Text style={styles.pinnedNavIcon}>📌</Text>
-        <Text style={styles.pinnedNavText}>View Pinned</Text>
-        {pinnedCount > 0 && (
-          <View style={styles.pinnedNavBadge}>
-            <Text style={styles.pinnedNavBadgeText}>{pinnedCount}</Text>
-          </View>
-        )}
-        <Text style={styles.pinnedNavArrow}>→</Text>
-      </TouchableOpacity>
-
       <FlatList
-        data={history}
+        data={pinned}
         keyExtractor={item => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📂</Text>
-            <Text style={styles.emptyText}>No history yet.</Text>
+            <Text style={styles.emptyIcon}>📌</Text>
+            <Text style={styles.emptyText}>No pinned hymns yet.</Text>
+            <Text style={styles.emptySubText}>Pin items from History to see them here.</Text>
           </View>
         }
       />
@@ -211,55 +189,12 @@ const styles = StyleSheet.create({
     color: '#636366',
     fontWeight: '600',
   },
-  pinnedNavButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1c1c1e',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#2c2c2e',
-  },
-  pinnedNavIcon: {
-    fontSize: 16,
-    marginRight: 10,
-  },
-  pinnedNavText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#e5e5e7',
-    flex: 1,
-  },
-  pinnedNavBadge: {
-    backgroundColor: '#4D9FFF',
-    borderRadius: 10,
-    minWidth: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    marginRight: 10,
-  },
-  pinnedNavBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  pinnedNavArrow: {
-    fontSize: 16,
-    color: '#636366',
-    fontWeight: '600',
-  },
   list: {
     padding: 12,
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f0f6ff',
     borderRadius: 20,
     padding: 14,
     marginBottom: 10,
@@ -268,10 +203,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    borderWidth: 1,
-    borderColor: '#e5e5ea',
+    borderWidth: 1.5,
+    borderColor: 'rgba(77, 159, 255, 0.4)',
     overflow: 'hidden',
     position: 'relative',
+  },
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 6,
+    backgroundColor: '#4D9FFF',
+    shadowColor: '#4D9FFF',
+    shadowOffset: { width: 3, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+  pinnedBadge: {
+    backgroundColor: '#4D9FFF',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  pinnedBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   cardHeader: {
     flexDirection: 'column',
@@ -313,7 +273,7 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#6b6b70',
+    color: '#2a6fcf',
     marginRight: 8,
     minWidth: 85,
     marginTop: 6,
@@ -325,15 +285,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hymnChip: {
-    backgroundColor: '#f2f2f7',
+    backgroundColor: '#4D9FFF',
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e5e5ea',
+    borderColor: '#4D9FFF',
   },
   hymnChipText: {
-    color: '#1c1c1e',
+    color: '#fff',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -382,9 +342,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  pinBtn: {
-    borderColor: '#e5e5ea',
-    backgroundColor: '#f2f2f7',
+  unpinBtn: {
+    borderColor: '#4D9FFF',
+    backgroundColor: 'rgba(77, 159, 255, 0.12)',
+  },
+  unpinBtnText: {
+    color: '#4D9FFF',
   },
   miniButtonText: {
     fontSize: 11,
@@ -406,5 +369,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#636366',
     fontWeight: '600',
-  }
+  },
+  emptySubText: {
+    fontSize: 13,
+    color: '#48484a',
+    fontWeight: '500',
+    marginTop: 8,
+  },
 });

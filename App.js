@@ -2,10 +2,18 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import AdminScreen from './screens/AdminScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import HomeScreen from './screens/HomeScreen';
+import LoginScreen from './screens/LoginScreen';
 import PDFViewerScreen from './screens/PDFViewerScreen';
+import PinnedScreen from './screens/PinnedScreen';
 import { hymnAssets } from './utils/hymnFileMap';
+import { clearSession, getDeviceId, getSession } from './utils/authUtils';
+
+// Initialize Convex client
+const convex = new ConvexReactClient("https://majestic-hare-999.convex.cloud");
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Home');
@@ -13,9 +21,54 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [initStatus, setInitStatus] = useState('Initializing...');
 
+  // Auth state
+  const [session, setSession] = useState(null);             // { userId, email, role }
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // loading auth on startup
+
   useEffect(() => {
-    initializeHymns();
+    initializeApp();
   }, []);
+
+  const initializeApp = async () => {
+    // Check auth session first
+    await checkSavedSession();
+
+    // Then initialize hymns
+    await initializeHymns();
+  };
+
+  const checkSavedSession = async () => {
+    try {
+      const savedSession = await getSession();
+      if (savedSession && savedSession.userId) {
+        // We have a saved session — validate it with Convex
+        // For now, trust the local session. Convex validateSession
+        // will be checked reactively when the app loads.
+        setSession(savedSession);
+      }
+    } catch (e) {
+      console.error('Failed to check session:', e);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  const handleLoginSuccess = (result) => {
+    setSession({
+      userId: result.userId,
+      email: result.email,
+      role: result.role,
+    });
+    setCurrentScreen('Home');
+    setScreenStack(['Home']);
+  };
+
+  const handleLogout = async () => {
+    await clearSession();
+    setSession(null);
+    setCurrentScreen('Home');
+    setScreenStack(['Home']);
+  };
 
   const initializeHymns = async () => {
     try {
@@ -34,11 +87,9 @@ export default function App() {
 
       for (const filename of keys) {
           count++;
-          // Check if this specific file already exists in phone storage
           const fileInfo = await FileSystem.getInfoAsync(hymnsDir + filename);
           
           if (!fileInfo.exists) {
-              // Only download and copy if it's missing
               const assetModule = hymnAssets[filename];
               const asset = Asset.fromModule(assetModule);
               await asset.downloadAsync();
@@ -67,21 +118,27 @@ export default function App() {
     } catch (e) {
       console.error("Error initializing hymns:", e);
       setInitStatus('Error initializing: ' + e.message);
-      // Allow continuing anyway?
       setTimeout(() => setIsReady(true), 3000);
     }
   };
 
-  // Simple Navigation System
+  // Simple Navigation System with back stack
+  const [screenStack, setScreenStack] = useState(['Home']);
+
   const navigation = {
     navigate: (screen, props = {}) => {
       setScreenProps(props);
       setCurrentScreen(screen);
+      setScreenStack(prev => [...prev, screen]);
     },
     goBack: () => {
-      if (currentScreen !== 'Home') {
-          setCurrentScreen('Home');
-      }
+      setScreenStack(prev => {
+        if (prev.length <= 1) return prev;
+        const newStack = prev.slice(0, -1);
+        const previousScreen = newStack[newStack.length - 1];
+        setCurrentScreen(previousScreen);
+        return newStack;
+      });
     }
   };
 
@@ -90,67 +147,67 @@ export default function App() {
   const renderScreen = () => {
     switch(currentScreen) {
         case 'Home':
-            return <HomeScreen navigation={navigation} />;
+            return <HomeScreen navigation={navigation} session={session} onLogout={handleLogout} />;
         case 'History':
             return <HistoryScreen navigation={navigation} />;
+        case 'Pinned':
+            return <PinnedScreen navigation={navigation} />;
         case 'PDFViewer':
             return <PDFViewerScreen navigation={navigation} route={route} />;
+        case 'Admin':
+            return <AdminScreen navigation={navigation} session={session} />;
         default:
-            return <HomeScreen navigation={navigation} />;
+            return <HomeScreen navigation={navigation} session={session} onLogout={handleLogout} />;
     }
   };
 
-  if (!isReady) {
+  // Show loading while checking auth + initializing hymns
+  if (!isReady || isCheckingAuth) {
       return (
+        <ConvexProvider client={convex}>
           <View style={[styles.container, styles.center]}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={{ marginTop: 20 }}>{initStatus}</Text>
+              <ActivityIndicator size="large" color="#4D9FFF" />
+              <Text style={{ marginTop: 20, color: '#a1a1aa' }}>{initStatus}</Text>
           </View>
+        </ConvexProvider>
       );
   }
 
+  // Not logged in → show login screen
+  if (!session) {
+    return (
+      <ConvexProvider client={convex}>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#0d0d0f" />
+          <LoginScreen onLoginSuccess={handleLoginSuccess} />
+        </SafeAreaView>
+      </ConvexProvider>
+    );
+  }
+
+  // Logged in → show app
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
-      <View style={styles.content}>
-        {renderScreen()}
-      </View>
-    </SafeAreaView>
+    <ConvexProvider client={convex}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#0d0d0f" />
+        
+        <View style={styles.content}>
+          {renderScreen()}
+        </View>
+      </SafeAreaView>
+    </ConvexProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#0d0d0f',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   center: {
       justifyContent: 'center',
       alignItems: 'center',
-  },
-  header: {
-    height: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#fff',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  backButton: {
-    padding: 5,
-  },
-  backText: {
-    color: '#007AFF',
-    fontSize: 16,
   },
   content: {
     flex: 1,

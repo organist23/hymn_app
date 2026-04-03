@@ -10,6 +10,7 @@ const HymnInput = ({ label, value, onChangeText, placeholder, keyboardType = 'nu
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        placeholderTextColor="#636366"
         keyboardType={keyboardType} 
         autoCapitalize="none"
         autoCorrect={false}
@@ -26,16 +27,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 5,
-    color: '#333',
+    color: '#e5e5e7',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#2c2c2e',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#3a3a3c',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#000',
+    color: '#e5e5e7',
   },
 });
 

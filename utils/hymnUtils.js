@@ -8,10 +8,7 @@ export const parseHymnInput = (text) => {
       const num = parseInt(item, 10);
       return !isNaN(num) && num > 0;
     })
-    .map(item => parseInt(item, 10)) // convert to number for sorting
-    .sort((a, b) => a - b)
-    .filter((item, index, array) => array.indexOf(item) === index) // dedupe
-    .map(num => String(num)); // format back to string without leading zeros
+    .map(item => String(parseInt(item, 10))); // format to string without leading zeros, preserve order & duplicates
 };
 
 export const getHymnFileName = (number, type) => {

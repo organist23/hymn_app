@@ -44,17 +44,17 @@ const DatePicker = ({ month, year, onMonthChange, onYearChange }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     borderRadius: 24,
     padding: 24,
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#f0f0f5',
+    borderColor: '#2c2c2e',
   },
   header: {
     flexDirection: 'row',
@@ -65,14 +65,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#8e8e93',
+    color: '#636366',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
   },
   yearBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f2f2f7',
+    backgroundColor: '#2c2c2e',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -82,12 +82,12 @@ const styles = StyleSheet.create({
   },
   yearArrow: {
     fontSize: 10,
-    color: '#007AFF',
+    color: '#4D9FFF',
   },
   yearText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1c1c1e',
+    color: '#e5e5e7',
     marginHorizontal: 8,
   },
   monthSelector: {
@@ -99,15 +99,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#f8f9ff',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e5ea',
+    borderColor: '#3a3a3c',
   },
   navIcon: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#4D9FFF',
     fontWeight: 'bold',
   },
   monthDisplay: {
@@ -116,12 +116,12 @@ const styles = StyleSheet.create({
   monthName: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#000',
+    color: '#e5e5e7',
     marginBottom: 2,
   },
   monthSub: {
     fontSize: 12,
-    color: '#8e8e93',
+    color: '#636366',
     fontWeight: '600',
     letterSpacing: 0.5,
   },

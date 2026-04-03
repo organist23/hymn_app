@@ -23,6 +23,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TouchableOpacity,
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { PDFDocument } from 'pdf-lib';
 import { WebView } from 'react-native-webview';
 
 const PDFViewerScreen = ({ route, navigation }) => {
@@ -74,16 +75,61 @@ const PDFViewerScreen = ({ route, navigation }) => {
         setIsPreparingPrint(true);
         setPrintProgress(0);
         
-        setPrintStatus('Processing...');
-        for (let i = 0; i <= 100; i += 2) {
-            setPrintProgress(i);
-            await new Promise(resolve => setTimeout(resolve, 30));
-        }
+        setPrintStatus('Reversing pages...');
+        setPrintProgress(10);
 
-        await Print.printAsync({ uri: cleanUri });
+        // Clean up any old temp files from previous prints
+        const tempDir = FileSystem.cacheDirectory + 'print_temp/';
+        const tempDirInfo = await FileSystem.getInfoAsync(tempDir);
+        if (tempDirInfo.exists) {
+          try {
+            await FileSystem.deleteAsync(tempDir, { idempotent: true });
+          } catch (_) {}
+        }
+        await FileSystem.makeDirectoryAsync(tempDir, { intermediates: true });
+
+        // Read the original PDF
+        const originalBase64 = await FileSystem.readAsStringAsync(cleanUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        setPrintProgress(30);
+
+        // Load and create a reversed copy
+        const srcDoc = await PDFDocument.load(originalBase64);
+        const reversedDoc = await PDFDocument.create();
+        const pageCount = srcDoc.getPageCount();
+        
+        // Copy pages in reverse order (last page first)
+        const reverseIndices = [];
+        for (let i = pageCount - 1; i >= 0; i--) {
+          reverseIndices.push(i);
+        }
+        const copiedPages = await reversedDoc.copyPages(srcDoc, reverseIndices);
+        copiedPages.forEach((page) => reversedDoc.addPage(page));
+        
+        setPrintProgress(60);
+        setPrintStatus('Preparing print...');
+
+        // Save reversed PDF to temp file (kept alive for Save-as-PDF to access)
+        const reversedBase64 = await reversedDoc.saveAsBase64();
+        const reversedUri = tempDir + `print_reversed_${Date.now()}.pdf`;
+        await FileSystem.writeAsStringAsync(reversedUri, reversedBase64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        setPrintProgress(90);
+        setPrintStatus('Sending to printer...');
+        setPrintProgress(100);
+
+        // Print the reversed PDF (default to US Letter: 8.5 x 11 inches = 612 x 792 points)
+        await Print.printAsync({ uri: reversedUri, width: 612, height: 792 });
     } catch (e) {
-        console.error(e);
-        Alert.alert("Printer Error", "Could not connect to printer. Please check your WiFi.");
+        // Don't show error if user just cancelled the print dialog
+        const msg = e?.message?.toLowerCase() || '';
+        if (!msg.includes('cancel') && !msg.includes('dismissed')) {
+          console.error(e);
+          Alert.alert("Printer Error", "Could not connect to printer. Please check your WiFi.");
+        }
     } finally {
         setIsPreparingPrint(false);
         setPrintProgress(0);
@@ -253,14 +299,14 @@ const PDFViewerScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#0d0d0f',
   },
   webviewContainer: {
     flex: 1,
   },
   webview: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: '#1c1c1e',
   },
   center: {
     flex: 1,
@@ -268,16 +314,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#fff',
+    color: '#a1a1a6',
     marginTop: 10,
     fontSize: 16,
   },
   footer: {
     padding: 20,
     paddingBottom: 40,
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f5',
+    borderTopColor: '#2c2c2e',
     alignItems: 'center',
     gap: 12,
   },
@@ -290,7 +336,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   shareBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     borderColor: '#4D9FFF',
   },
   printBtn: {
@@ -308,28 +354,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     zIndex: 1000,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 30,
   },
   progressCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     width: '100%',
     padding: 30,
     borderRadius: 24,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 20,
+    borderWidth: 1,
+    borderColor: '#2c2c2e',
   },
   progressHeading: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#333',
+    color: '#e5e5e7',
     marginBottom: 5,
     textAlign: 'center',
   },
@@ -342,7 +390,7 @@ const styles = StyleSheet.create({
   fullProgressBarWrapper: {
     width: '100%',
     height: 14,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#2c2c2e',
     borderRadius: 7,
     overflow: 'hidden',
     marginBottom: 20,
@@ -353,13 +401,13 @@ const styles = StyleSheet.create({
   },
   checklistContainer: {
     width: '100%',
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#2c2c2e',
     padding: 15,
     borderRadius: 12,
   },
   checkItem: {
     fontSize: 13,
-    color: '#666',
+    color: '#a1a1a6',
     fontWeight: '600',
     marginBottom: 6,
   },
@@ -371,7 +419,7 @@ const styles = StyleSheet.create({
   },
   wifiHint: {
     fontSize: 9,
-    color: '#8e8e93',
+    color: '#636366',
     fontWeight: '500',
     letterSpacing: 0.1,
   },
@@ -389,7 +437,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
