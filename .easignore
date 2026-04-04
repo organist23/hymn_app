@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+.DS_Store
+.git/
+.vscode/
+scripts/
+*.md

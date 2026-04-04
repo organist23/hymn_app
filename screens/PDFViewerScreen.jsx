@@ -75,54 +75,17 @@ const PDFViewerScreen = ({ route, navigation }) => {
         setIsPreparingPrint(true);
         setPrintProgress(0);
         
-        setPrintStatus('Reversing pages...');
-        setPrintProgress(10);
-
-        // Clean up any old temp files from previous prints
-        const tempDir = FileSystem.cacheDirectory + 'print_temp/';
-        const tempDirInfo = await FileSystem.getInfoAsync(tempDir);
-        if (tempDirInfo.exists) {
-          try {
-            await FileSystem.deleteAsync(tempDir, { idempotent: true });
-          } catch (_) {}
-        }
-        await FileSystem.makeDirectoryAsync(tempDir, { intermediates: true });
-
-        // Read the original PDF
-        const originalBase64 = await FileSystem.readAsStringAsync(cleanUri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        setPrintProgress(30);
-
-        // Load and create a reversed copy
-        const srcDoc = await PDFDocument.load(originalBase64);
-        const reversedDoc = await PDFDocument.create();
-        const pageCount = srcDoc.getPageCount();
+        setPrintStatus('Preparing document...');
+        setPrintProgress(50);
         
-        // Copy pages in reverse order (last page first)
-        const reverseIndices = [];
-        for (let i = pageCount - 1; i >= 0; i--) {
-          reverseIndices.push(i);
-        }
-        const copiedPages = await reversedDoc.copyPages(srcDoc, reverseIndices);
-        copiedPages.forEach((page) => reversedDoc.addPage(page));
-        
-        setPrintProgress(60);
-        setPrintStatus('Preparing print...');
+        // Small delay to ensure the UI progress overlay renders
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Save reversed PDF to temp file (kept alive for Save-as-PDF to access)
-        const reversedBase64 = await reversedDoc.saveAsBase64();
-        const reversedUri = tempDir + `print_reversed_${Date.now()}.pdf`;
-        await FileSystem.writeAsStringAsync(reversedUri, reversedBase64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        setPrintProgress(90);
         setPrintStatus('Sending to printer...');
         setPrintProgress(100);
 
-        // Print the reversed PDF (default to US Letter: 8.5 x 11 inches = 612 x 792 points)
-        await Print.printAsync({ uri: reversedUri, width: 612, height: 792 });
+        // Print the original PDF directly (default to US Letter: 8.5 x 11 inches)
+        await Print.printAsync({ uri: cleanUri, width: 612, height: 792 });
     } catch (e) {
         // Don't show error if user just cancelled the print dialog
         const msg = e?.message?.toLowerCase() || '';
