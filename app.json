@@ -4,7 +4,7 @@
     "slug": "hymn-combiner",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./logo/music.jpg",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -21,7 +21,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./logo/music.jpg",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.hymncombiner"
