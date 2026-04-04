@@ -15,6 +15,9 @@
       "channel": "preview"
     },
     "production": {
+      "android": {
+        "buildType": "apk"
+      },
       "channel": "production"
     }
   }
